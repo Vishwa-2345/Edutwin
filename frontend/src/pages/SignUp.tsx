@@ -45,14 +45,14 @@ export const SignUp = () => {
     };
 
     return (
-        <PageWrapper className="justify-center items-center py-12 relative" withPadding={false}>
+        <PageWrapper className="justify-center items-center py-12 relative min-h-[100dvh] overflow-x-hidden overflow-y-auto" withPadding={false}>
             {/* Center Seal Mark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 0.5, scale: 1 }}
                     transition={{ duration: 0.8, delay: 0.5 }}
-                    className="w-96 h-96 max-w-2xl max-h-2xl flex items-center justify-center"
+                    className="w-full max-w-xs sm:max-w-sm aspect-square lg:w-full lg:h-full lg:max-w-2xl lg:max-h-2xl flex items-center justify-center"
                 >
                     <svg viewBox="0 0 200 200" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
                         <defs>
@@ -110,7 +110,7 @@ export const SignUp = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, type: 'spring' }}
-                className="w-full max-w-md p-4 relative z-10"
+                className="w-full max-w-md p-4 relative z-10 m-auto"
             >
                 <div className="text-center mb-10">
                     <Link to="/" className="text-4xl font-bold tracking-tighter inline-block mb-4">

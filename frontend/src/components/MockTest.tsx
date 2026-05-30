@@ -253,7 +253,7 @@ export const MockTest = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="animate-spin">
           <BookOpen className="w-12 h-12 text-pink-500" />
         </div>
@@ -263,7 +263,7 @@ export const MockTest = ({
 
   if (!questions.length) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-center">
+      <div className="flex items-center justify-center min-h-[100dvh] text-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">No questions available</h2>
           <button
@@ -292,7 +292,7 @@ export const MockTest = ({
   const isCurrentFlagged = flaggedQuestions.has(currentQuestion.id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-[100dvh] bg-gray-50">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

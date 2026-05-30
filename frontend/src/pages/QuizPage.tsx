@@ -306,8 +306,8 @@ export const QuizPage = () => {
     // Loading state
     if (loading) {
         return (
-            <PageWrapper className="justify-center items-center py-12" withPadding={false}>
-                <div className="flex flex-col items-center gap-4">
+            <PageWrapper className="py-12" withPadding={false}>
+                <div className="flex flex-col items-center gap-4 m-auto">
                     <Loader2 className="w-10 h-10 text-brand animate-spin" />
                     <p className="text-gray-500 font-medium">Loading quiz questions...</p>
                 </div>
@@ -318,8 +318,8 @@ export const QuizPage = () => {
     // No questions available
     if (questions.length === 0) {
         return (
-            <PageWrapper className="justify-center items-center py-12" withPadding={false}>
-                <div className="flex flex-col items-center gap-4 text-center">
+            <PageWrapper className="py-12" withPadding={false}>
+                <div className="flex flex-col items-center gap-4 text-center m-auto">
                     <Trophy className="w-12 h-12 text-gray-300" />
                     <h2 className="text-xl font-bold text-gray-800">No quiz available</h2>
                     <p className="text-gray-500">No questions found for this topic. Try another one!</p>
@@ -332,8 +332,8 @@ export const QuizPage = () => {
     // Results Screen
     if (showResult) {
         return (
-            <PageWrapper className="justify-center items-center py-12" withPadding={false}>
-                <div className="w-full max-w-3xl px-4 space-y-8">
+            <PageWrapper className="py-12" withPadding={false}>
+                <div className="w-full max-w-3xl px-4 space-y-8 m-auto">
 
                     {/* Score Header */}
                     <motion.div
@@ -447,7 +447,7 @@ export const QuizPage = () => {
 
     // Quiz Screen
     return (
-        <PageWrapper className="justify-center items-center py-12" withPadding={false}>
+        <PageWrapper className="py-12" withPadding={false}>
             {/* ── Glitter overlay on correct answer ── */}
             <AnimatePresence>
                 {feedbackState === 'correct' && (
@@ -462,7 +462,7 @@ export const QuizPage = () => {
                 )}
             </AnimatePresence>
 
-            <div className="w-full max-w-3xl px-4 space-y-8">
+            <div className="w-full max-w-3xl px-4 space-y-8 m-auto">
 
                 {/* Top Progress Bar */}
                 <div className="flex items-center gap-4 w-full mb-8">

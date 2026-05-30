@@ -4,7 +4,7 @@
 
 @layer base {
   html, body {
-    @apply overflow-hidden h-full;
+    @apply overflow-x-hidden min-h-[100dvh];
   }
   body {
     @apply bg-[#fdf6f0] text-gray-800 antialiased;
