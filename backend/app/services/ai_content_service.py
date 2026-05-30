@@ -233,8 +233,8 @@ STRICT RULES:
 3. The correct answer MUST be factually accurate and unambiguous.
 4. The explanation MUST clearly justify WHY the correct answer is right.
 5. Cover different sub-concepts within "{topic_name}" — no two questions should test the same sub-concept.
-6. difficulty field must be one of: "easy", "medium", or "hard" — NOT "mixed".
-
+6. CRITICAL OPTIONS VARIETY: Every single question MUST have completely unique options. Do NOT reuse the same set of options across different questions.
+7. difficulty field must be one of: "easy", "medium", or "hard" — NOT "mixed".
 OUTPUT FORMAT — Return ONLY a raw JSON array. No markdown, no code blocks, nothing else:
 [
   {{

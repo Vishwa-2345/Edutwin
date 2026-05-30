@@ -83,7 +83,8 @@ RULES — YOU MUST FOLLOW ALL:
    - {n_fill} Fill-in-the-Blank questions (one blank with one clear answer)
    - {n_short} Short Answer questions (require 1–3 sentence answer)
 5. For every question provide a clear, educational explanation of WHY the answer is correct.
-6. Do NOT repeat concepts — cover a WIDE range of sub-topics within "{topic_name}".
+6. CRITICAL ANTI-REPETITION: Do NOT repeat concepts — cover a WIDE range of sub-topics within "{topic_name}".
+7. CRITICAL OPTIONS VARIETY: Every single multiple choice question MUST have completely unique options. Do NOT reuse the same set of options across different questions.
 {history_str}
 
 Return ONLY a valid JSON array. No markdown, no code blocks, no extra text:
@@ -209,9 +210,14 @@ Return ONLY a valid JSON array. No markdown, no code blocks, no extra text:
     
     def _call_gemini(self, prompt: str) -> str:
         """Synchronous wrapper for Gemini API call using google-genai SDK"""
+        from google.genai import types
         response = self.genai_client.models.generate_content(
             model=self.gemini_model,
             contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.7,
+            )
         )
         return response.text
 

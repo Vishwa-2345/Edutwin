@@ -182,8 +182,18 @@ async def generate_mock_test(
 ):
     """Generate a comprehensive mock test using Gemini AI"""
     try:
-        # Combine all topics into a single string
-        topics_str = ", ".join(test_request.topics) if test_request.topics else "General Programming"
+        # Resolve topic IDs to actual topic names
+        topic_names = []
+        if test_request.topics:
+            for topic_id in test_request.topics:
+                # First try to see if it's already a topic name (fallback)
+                topic = get_topic_by_id(topic_id)
+                if topic:
+                    topic_names.append(topic.get("topicName") or topic.get("name") or topic_id)
+                else:
+                    topic_names.append(topic_id)
+        
+        topics_str = ", ".join(topic_names) if topic_names else "General Programming"
         
         # Generate mock test questions using Gemini AI (NO FALLBACK - always use AI)
         ai_questions = await mock_test_service.generate_mock_test_questions(
