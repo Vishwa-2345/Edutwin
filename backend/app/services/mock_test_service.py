@@ -28,7 +28,14 @@ class MockTestSecurityService:
     """Handles all mock test security and generation"""
     
     def __init__(self):
-        self.genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        # Initialize Gemini client only if API key is configured
+        self.genai_client = None
+        try:
+            if settings.GEMINI_API_KEY:
+                self.genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        except Exception as e:
+            logger.warning(f"Gemini client initialization failed: {e}")
+
         self.gemini_model = settings.GEMINI_MODEL
         self.openrouter_api_key = settings.OPENROUTER_API_KEY
         self.openrouter_model = settings.OPENROUTER_MODEL
@@ -202,6 +209,9 @@ Return ONLY valid JSON array with no additional text:
     
     def _call_gemini(self, prompt: str) -> str:
         """Synchronous wrapper for Gemini API call"""
+        if not self.genai_client:
+            raise Exception("Gemini API key not configured")
+
         response = self.genai_client.models.generate_content(
             model=self.gemini_model,
             contents=prompt,
