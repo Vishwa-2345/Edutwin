@@ -124,62 +124,56 @@ async def generate_adaptive_quiz(
     question_count: int = Query(10, ge=5, le=15, description="Number of questions"),
     current_user: dict = Depends(get_current_user_from_token)
 ):
-    """Generate an adaptive quiz based on user's performance history"""
+    """Generate an adaptive quiz based on the topic using Gemini AI"""
+    from app.services.ai_content_service import ai_generator
+
     topic = get_topic_by_id(topic_id)
     if not topic:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Topic not found"
         )
-    
-    user = current_user
-    
-    user = current_user
-    
+
+    topic_name = topic.get("topicName") or topic.get("name", "Programming")
+    difficulty = topic.get("difficulty", "medium")
+
     try:
-        # Mock performance history - in production, get from database
-        performance_history = [
-            {"topic": "Python Loops", "score": 60, "attempts": 2},
-            {"topic": "Variables", "score": 85, "attempts": 1},
-        ]
-        
-        # Generate adaptive quiz using adaptive engine (Gemini)
-        adaptive_questions = await adaptive_engine_service.generate_adaptive_quiz(
-            topic_name=topic["topicName"],
-            difficulty=topic["difficulty"],
-            user_performance_history=performance_history,
-            question_count=question_count,
+        # Always generate fresh AI questions for this specific topic
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Generating AI quiz for topic: {topic_name} ({question_count} questions, {difficulty})")
+
+        questions = await ai_generator.generate_quiz_questions(
+            topic_name=topic_name,
+            num_questions=question_count,
+            difficulty=difficulty,
         )
-        
-        if not adaptive_questions:
-            # Fallback to existing quiz questions
-            adaptive_questions = topic["quiz"][:question_count]
-        
+
+        if not questions:
+            raise ValueError("AI returned no questions")
+
         return SuccessResponse(
             success=True,
-            message="Adaptive quiz generated successfully",
+            message="AI quiz generated successfully",
             data={
                 "topicId": topic_id,
-                "topicName": topic["topicName"],
-                "questions": adaptive_questions,
+                "topicName": topic_name,
+                "questions": questions,
                 "isAdaptive": True,
-                "totalQuestions": len(adaptive_questions)
+                "isAIGenerated": True,
+                "totalQuestions": len(questions)
             }
         )
-        
+
     except Exception as e:
-        # Fallback to regular quiz on error
-        return SuccessResponse(
-            success=True,
-            message="Quiz generated (fallback mode)",
-            data={
-                "topicId": topic_id,
-                "topicName": topic["topicName"],
-                "questions": topic["quiz"][:question_count],
-                "isAdaptive": False,
-                "totalQuestions": len(topic["quiz"][:question_count])
-            }
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"AI quiz generation failed for {topic_name}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate AI quiz for topic '{topic_name}'. Please try again."
         )
+
 
 @router.post("/mock-test", response_model=SuccessResponse)
 async def generate_mock_test(

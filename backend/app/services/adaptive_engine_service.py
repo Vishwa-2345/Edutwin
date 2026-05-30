@@ -190,20 +190,21 @@ class AdaptiveEngineService:
     async def _call_gemini_text(
         self,
         prompt: str,
-        max_tokens: int = 1200,
+        max_tokens: int = 4096,
         temperature: float = 0.8,
-        timeout: float = 30.0,
+        timeout: float = 60.0,
         retries: int = 3
     ) -> str:
         """Call Gemini API for text generation (non-JSON) with retry logic"""
         if not self.api_key:
             logger.warning("Gemini API key not configured")
             return ""
-        
+
         url = f"{self.base_url}/models/{self.model}:generateContent"
-        
+
         for attempt in range(retries):
             try:
+                import asyncio
                 params = {"key": self.api_key}
                 payload = {
                     "contents": [
@@ -218,27 +219,30 @@ class AdaptiveEngineService:
                         "maxOutputTokens": max_tokens,
                     },
                 }
-                
+
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     res = await client.post(url, params=params, json=payload)
-                    
-                    # Handle rate limiting with retry
-                    if res.status_code == 429:
-                        logger.warning(f"Rate limited, attempt {attempt + 1}/{retries}")
+
+                    # Handle rate limiting and model overload with retry
+                    if res.status_code in (429, 503):
+                        wait = 2 ** attempt
+                        logger.warning(f"Gemini {res.status_code} – retrying in {wait}s (attempt {attempt + 1}/{retries})")
                         if attempt < retries - 1:
-                            import asyncio
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                            await asyncio.sleep(wait)
                             continue
-                    
+                        # All retries exhausted
+                        logger.error(f"Gemini API {res.status_code} after all retries")
+                        return ""
+
                     if res.status_code in [400, 401, 403]:
                         error_data = res.json() if res.text else {}
                         error_msg = error_data.get("error", {}).get("message", "Unknown error")
                         logger.error(f"Gemini auth error {res.status_code}: {error_msg}")
                         return ""
-                    
+
                     res.raise_for_status()
                     data = res.json()
-                    
+
                     # Extract text from response
                     try:
                         text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -247,12 +251,12 @@ class AdaptiveEngineService:
                     except (KeyError, IndexError, TypeError) as parse_error:
                         logger.error(f"Failed to parse Gemini response: {parse_error}. Raw: {data}")
                         return ""
-                        
+
             except httpx.TimeoutException as e:
                 logger.warning(f"Gemini API timeout (attempt {attempt + 1}/{retries}): {e}")
                 if attempt < retries - 1:
                     import asyncio
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
                     continue
                 return ""
             except httpx.HTTPStatusError as e:
@@ -265,9 +269,10 @@ class AdaptiveEngineService:
                     await asyncio.sleep(1)
                     continue
                 return ""
-        
+
         logger.error("Gemini API failed after all retries")
         return ""
+
 
     async def chat(
         self,

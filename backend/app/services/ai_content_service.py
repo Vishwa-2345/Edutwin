@@ -32,19 +32,19 @@ class AIContentGenerator:
         self.base_url = settings.GEMINI_BASE_URL
     
     async def call_gemini(
-        self, 
-        prompt: str, 
-        temperature: float = 0.7, 
-        max_tokens: int = 2048,
+        self,
+        prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
         retries: int = 3
     ) -> str:
-        """Call Gemini API with retry logic"""
-        
+        """Call Gemini API with retry logic and 503/429 backoff"""
+
         for attempt in range(retries):
             try:
                 url = f"{self.base_url}/models/{self.model}:generateContent"
                 params = {"key": self.api_key}
-                
+
                 payload = {
                     "contents": [
                         {
@@ -58,33 +58,35 @@ class AIContentGenerator:
                         "maxOutputTokens": max_tokens,
                     }
                 }
-                
-                async with httpx.AsyncClient(timeout=30.0) as client:
+
+                async with httpx.AsyncClient(timeout=60.0) as client:
                     response = await client.post(url, params=params, json=payload)
-                    
+
                     if response.status_code == 200:
                         data = response.json()
                         if "candidates" in data and len(data["candidates"]) > 0:
                             return data["candidates"][0]["content"]["parts"][0]["text"]
-                    
-                    elif response.status_code == 429:  # Rate limit
+
+                    elif response.status_code in (429, 503):  # Rate limit or overload
+                        wait = 2 ** attempt
+                        logger.warning(f"Gemini {response.status_code} – retrying in {wait}s (attempt {attempt+1}/{retries})")
                         if attempt < retries - 1:
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                            await asyncio.sleep(wait)
                             continue
-                    
-                    logger.error(f"Gemini API error {response.status_code}: {response.text[:200]}")
-                    
+
+                    logger.error(f"Gemini API error {response.status_code}: {response.text[:300]}")
+
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout attempt {attempt + 1}/{retries}")
                 if attempt < retries - 1:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
                     continue
             except Exception as e:
                 logger.error(f"Error calling Gemini: {e}")
                 if attempt < retries - 1:
                     await asyncio.sleep(1)
                     continue
-        
+
         return ""
     
     def _clean_json(self, text: str) -> str:
@@ -248,8 +250,9 @@ IMPORTANT: Output ONLY the JSON array starting with [ and ending with ]. Nothing
 """
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=2048)
+            response = await self.call_gemini(prompt, max_tokens=8192)
             response = self._clean_json(response)
+
             
             # Try to parse JSON
             try:
