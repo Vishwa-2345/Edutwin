@@ -76,7 +76,7 @@ export const StudyMaterial = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+            <div className="min-h-[100dvh] bg-gray-100 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-brand animate-spin" />
             </div>
         );
@@ -84,7 +84,7 @@ export const StudyMaterial = () => {
 
     if (!material) {
         return (
-            <div className="min-h-screen bg-gray-100 flex flex-col">
+            <div className="min-h-[100dvh] bg-gray-100 flex flex-col">
                 <div className="bg-white border-b px-4 py-3 flex items-center gap-3 shadow-sm">
                     <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
                         <ArrowLeft className="w-4 h-4" /> Back
@@ -135,7 +135,7 @@ export const StudyMaterial = () => {
     const nextSection = () => ++sectionNum;
 
     return (
-        <div className="h-screen overflow-y-auto bg-gray-200">
+        <div className="min-h-[100dvh] h-full overflow-y-auto bg-gray-200">
             {/* Fixed Header */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
                 <button

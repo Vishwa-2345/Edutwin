@@ -48,14 +48,14 @@ export const SignIn = () => {
     };
 
     return (
-        <div className="w-full flex flex-col lg:flex-row lg:min-h-screen overflow-auto relative">
+        <div className="w-full flex flex-col lg:flex-row min-h-[100dvh] overflow-x-hidden overflow-y-auto relative bg-pink-50 lg:bg-transparent">
             {/* Center Seal Mark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 0.5, scale: 1 }}
                     transition={{ duration: 0.8, delay: 0.5 }}
-                    className="w-96 h-96 lg:w-full lg:h-full lg:max-w-2xl lg:max-h-2xl flex items-center justify-center"
+                    className="w-full max-w-xs sm:max-w-sm aspect-square lg:w-full lg:h-full lg:max-w-2xl lg:max-h-2xl flex items-center justify-center"
                 >
                     <svg viewBox="0 0 200 200" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
                         <defs>
@@ -100,7 +100,7 @@ export const SignIn = () => {
             </div>
 
             {/* Left panel — branding + features */}
-            <div className="lg:w-1/2 w-full relative flex flex-col justify-center px-8 sm:px-14 lg:px-16 py-12 lg:py-0 z-10" style={{ background: 'linear-gradient(135deg, #fce4ec 0%, #fdf2f8 50%, #fce7f3 100%)' }}>
+            <div className="lg:w-1/2 w-full relative flex flex-col justify-center px-8 sm:px-14 lg:px-16 py-12 lg:py-0 z-10 lg:min-h-[100dvh]" style={{ background: 'linear-gradient(135deg, #fce4ec 0%, #fdf2f8 50%, #fce7f3 100%)' }}>
                 {/* Decorative circles */}
                 <div className="absolute top-10 left-10 w-48 h-48 bg-pink-200/30 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute bottom-16 right-10 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl pointer-events-none" />
@@ -149,7 +149,7 @@ export const SignIn = () => {
             </div>
 
             {/* Right panel — login form */}
-            <div className="lg:w-1/2 w-full relative flex items-center justify-center px-6 sm:px-12 py-12 lg:py-0 z-10" style={{ background: 'linear-gradient(135deg, #fce4ec 0%, #fdf2f8 50%, #fce7f3 100%)' }}>
+            <div className="lg:w-1/2 w-full relative flex items-center justify-center px-6 sm:px-12 py-12 lg:py-0 z-10 lg:min-h-[100dvh]" style={{ background: 'linear-gradient(135deg, #fce4ec 0%, #fdf2f8 50%, #fce7f3 100%)' }}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

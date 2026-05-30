@@ -4,7 +4,7 @@ import Navbar from './Navbar';
 
 export default function Layout() {
     return (
-        <div className="min-h-screen bg-surface relative overflow-hidden">
+        <div className="min-h-[100dvh] bg-surface relative overflow-hidden">
             {/* Animated Mesh Background */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[100px] animate-pulse" />
@@ -12,7 +12,7 @@ export default function Layout() {
                 <div className="absolute top-[40%] left-[30%] w-[30%] h-[30%] rounded-full bg-fuchsia-500/10 blur-[90px] animate-pulse" style={{ animationDelay: '4s' }} />
             </div>
 
-            <div className="relative z-10 flex flex-col min-h-screen">
+            <div className="relative z-10 flex flex-col min-h-[100dvh]">
                 <Navbar />
                 <motion.main
                     initial={{ opacity: 0, y: 16 }}

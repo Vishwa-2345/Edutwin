@@ -8,7 +8,7 @@ export const PDFViewer = () => {
     const pdfTitle = searchParams.get('title') || 'Study Material';
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-[100dvh] bg-gray-50 flex flex-col">
             {/* Header Bar */}
             <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
                 <button
@@ -29,7 +29,7 @@ export const PDFViewer = () => {
                     src={pdfUrl}
                     className="flex-1 w-full border-0"
                     title={pdfTitle}
-                    style={{ minHeight: 'calc(100vh - 56px)' }}
+                    style={{ minHeight: 'calc(100dvh - 56px)' }}
                     sandbox="allow-scripts allow-same-origin allow-popups"
                 />
             ) : (

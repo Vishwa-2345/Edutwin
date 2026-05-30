@@ -96,7 +96,7 @@ export const Dashboard = () => {
             <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <PageWrapper className="lg:pl-64" withPadding={false}>
-                <div className="h-screen pt-20 pb-4 px-3 sm:px-6 lg:px-8 w-full overflow-hidden flex flex-col" style={{ background: preferences.wallpaper.gradient }}>
+                <div className="min-h-[100dvh] lg:h-screen pt-20 pb-10 px-3 sm:px-6 lg:px-8 w-full overflow-y-auto lg:overflow-hidden flex flex-col" style={{ background: preferences.wallpaper.gradient }}>
                     {/* Decorative Background Elements */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                         <DecorativeElement symbol="⭐" x={8} y={15} delay={0} scale={1.2} />
