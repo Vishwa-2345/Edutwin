@@ -9,12 +9,14 @@ import { Progress } from './pages/Progress';
 import { UserProfile } from './pages/UserProfile';
 import { VideoRecommendations } from './pages/VideoRecommendations';
 import { MockTest } from './pages/MockTest';
-import { MockTestResults } from './pages/MockTestResults';
+
 import { AIChat } from './pages/AIChat';
 import { Notes } from './pages/Notes';
 import { PDFViewer } from './pages/PDFViewer';
 import { StudyMaterial } from './pages/StudyMaterial';
 import ProtectedRoute from './components/ProtectedRoute';
+
+import { AllTopics } from './pages/AllTopics';
 
 function AppRoutes() {
   const location = useLocation();
@@ -43,12 +45,13 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
       <Route path="/topic" element={<ProtectedRoute><TopicView /></ProtectedRoute>} />
+      <Route path="/all-topics" element={<ProtectedRoute><AllTopics /></ProtectedRoute>} />
       <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
       <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
       <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
       <Route path="/videos" element={<ProtectedRoute><VideoRecommendations /></ProtectedRoute>} />
       <Route path="/mock-test" element={<ProtectedRoute><MockTest /></ProtectedRoute>} />
-      <Route path="/mock-test-results" element={<ProtectedRoute><MockTestResults /></ProtectedRoute>} />
+
       <Route path="/chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
       <Route path="/pdf-viewer" element={<ProtectedRoute><PDFViewer /></ProtectedRoute>} />
       <Route path="/study-material" element={<ProtectedRoute><StudyMaterial /></ProtectedRoute>} />
