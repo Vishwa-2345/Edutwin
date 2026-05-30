@@ -28,15 +28,11 @@ class MockTestSecurityService:
     """Handles all mock test security and generation"""
     
     def __init__(self):
-        # Initialize Gemini client only if API key is configured
-        self.genai_client = None
-        try:
-            if settings.GEMINI_API_KEY:
-                self.genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        except Exception as e:
-            logger.warning(f"Gemini client initialization failed: {e}")
+                """Synchronous wrapper for Gemini API call"""
+        if not self.genai_client:
+            raise Exception("Gemini API key not configured")
 
-        self.gemini_model = settings.GEMINI_MODEL
+        from google.genai import types
         self.openrouter_api_key = settings.OPENROUTER_API_KEY
         self.openrouter_model = settings.OPENROUTER_MODEL
         self.max_violations = 10
@@ -60,59 +56,65 @@ class MockTestSecurityService:
         
         history_str = ""
         if history:
-            history_str = f"""
-### ANTI-REPEAT SYSTEM:
-- Maintain a running list of ALL questions you have asked in this entire conversation.
-- Before generating any new question, check that list.
-- If a similar question (same concept, same answer, or same wording) was already asked — SKIP it and generate a different one.
-- Never ask the same concept twice even if the wording is slightly different.
-- Treat each question as UNIQUE by tracking: topic + concept + correct answer combination.
+            history_str = (
+                "\n\nANTI-REPEAT RULES:\n"
+                "- Every question below was ALREADY ASKED. Do NOT regenerate them.\n"
+                "- Avoid same concept, wording, or answer. Track: topic+concept+answer.\n"
+                "PREVIOUS QUESTIONS:\n" +
+                "\n".join([f"- {h}" for h in history])
+            )
 
-PREVIOUS QUESTIONS FOR {topic_name}:
-""" + "\n".join([f"- {h}" for h in history])
+        n_mcq = num_questions // 3
+        n_fill = num_questions // 3
+        n_short = num_questions - n_mcq - n_fill
 
-        prompt = f"""Generate a comprehensive mock test with {num_questions} questions for the topic: '{topic_name}'
+        prompt = f"""You are an expert exam setter specializing in computer science and programming education.
 
+Generate a high-quality mock test with EXACTLY {num_questions} questions strictly about the topic: "{topic_name}".
+
+RULES — YOU MUST FOLLOW ALL:
+1. ALL questions MUST be 100% relevant to "{topic_name}" only. Do NOT drift to unrelated topics.
+2. Questions must be FACTUALLY CORRECT with unambiguous correct answers.
+3. Distribute difficulty progressively:
+   - First {n_mcq} questions: easy
+   - Middle {n_fill} questions: medium
+   - Last {n_short} questions: hard
+4. Use this question distribution:
+   - {n_mcq} Multiple Choice questions (4 options: A, B, C, D — exactly one correct)
+   - {n_fill} Fill-in-the-Blank questions (one blank with one clear answer)
+   - {n_short} Short Answer questions (require 1–3 sentence answer)
+5. For every question provide a clear, educational explanation of WHY the answer is correct.
+6. CRITICAL ANTI-REPETITION: Do NOT repeat concepts — cover a WIDE range of sub-topics within "{topic_name}".
+7. CRITICAL OPTIONS VARIETY: Every single multiple choice question MUST have completely unique options. Do NOT reuse the same set of options across different questions.
 {history_str}
 
-STRICT REQUIREMENTS:
-1. Create {num_questions} questions with the following distribution:
-   - {num_questions // 3} Multiple Choice (MCQ) questions
-   - {num_questions // 3} Fill-in-the-Blank questions
-   - {num_questions // 3} Short Answer questions
-
-2. For EACH question provide:
-   - question_type: "multiple_choice", "fill_blank", or "short_answer"
-   - question: The question text
-   - options (for MCQ only): Array of 4 options [A, B, C, D]
-   - correct_answer: The correct answer
-   - explanation: Why this is correct and how to understand it
-   - difficulty: "easy", "medium", or "hard"
-   - points: 1-5 points based on difficulty
-
-3. Make questions:
-   - Specific to "{topic_name}"
-   - Progressive in difficulty (easy → medium → hard)
-   - Comprehensive coverage of the topic
-   - Practical and scenario-based where applicable
-   - If all easy questions on a topic are exhausted, move to medium/hard variants.
-
-4. ANTI-REPEAT FINAL CHECK:
-   - Compare every question you just wrote against the list of PREVIOUS QUESTIONS.
-   - If ANY question matches in concept, wording, or answer, REWRITE IT NOW before returning the JSON.
-
-Return ONLY valid JSON array with no additional text:
+Return ONLY a valid JSON array. No markdown, no code blocks, no extra text:
 [
   {{
     "question_type": "multiple_choice",
-    "question": "...",
-    "options": ["...", "...", "...", "..."],
-    "correct_answer": "...",
-    "explanation": "...",
+    "question": "What does the 'self' keyword represent in a Python class method?",
+    "options": ["A. The class itself", "B. The current instance of the class", "C. A static method reference", "D. The parent class"],
+    "correct_answer": "B. The current instance of the class",
+    "explanation": "'self' refers to the instance of the class on which the method is called, allowing access to instance attributes and methods.",
     "difficulty": "easy",
+    "points": 1
+  }},
+  {{
+    "question_type": "fill_blank",
+    "question": "In Python, the ___ keyword is used to define a generator function.",
+    "correct_answer": "yield",
+    "explanation": "The 'yield' keyword pauses a function and returns a value, turning it into a generator that can be iterated lazily.",
+    "difficulty": "medium",
     "points": 2
   }},
-  ...
+  {{
+    "question_type": "short_answer",
+    "question": "Explain the difference between shallow copy and deep copy in Python.",
+    "correct_answer": "A shallow copy creates a new object but references the same nested objects, while a deep copy creates a fully independent clone of all nested objects.",
+    "explanation": "Use copy.copy() for shallow copy and copy.deepcopy() for deep copy. The difference matters when dealing with mutable nested structures.",
+    "difficulty": "hard",
+    "points": 3
+  }}
 ]"""
         
         logger.info(f"Generating {num_questions} mock test questions for topic: {topic_name}")
@@ -155,9 +157,9 @@ Return ONLY valid JSON array with no additional text:
             except Exception as e:
                 logger.warning(f"⚠️  OpenRouter API error: {e}")
         
-        # Step 3: Fall back to synthetic questions
-        logger.warning(f"⚠️  All AI APIs failed, using synthetic questions for {topic_name}")
-        return self._create_fallback_questions(topic_name, num_questions)
+        # Step 3: All failed
+        logger.error(f"⚠️  All AI APIs failed to generate mock test for {topic_name}")
+        raise ValueError(f"Failed to generate AI questions for {topic_name}. Please try again later.")
     
     async def _generate_with_openrouter(self, prompt: str, num_questions: int) -> Optional[List[Dict[str, Any]]]:
         """Generate questions using OpenRouter API (Claude or similar)"""
@@ -215,8 +217,13 @@ Return ONLY valid JSON array with no additional text:
         response = self.genai_client.models.generate_content(
             model=self.gemini_model,
             contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.7,
+            )
         )
         return response.text
+
     
     def _create_fallback_questions(self, topic: str, count: int) -> List[Dict[str, Any]]:
         """Create high-quality fallback questions if AI fails"""

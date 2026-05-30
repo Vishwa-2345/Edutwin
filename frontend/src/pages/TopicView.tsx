@@ -10,6 +10,7 @@ import { ConfidenceSlider } from '../components/learning/ConfidenceSlider';
 import { FlowchartExplanation } from '../components/learning/FlowchartExplanation';
 import type { FlowchartNode } from '../components/learning/FlowchartExplanation';
 import { MockTestModal } from '../components/MockTestModal';
+import { TestResultModal } from '../components/TestResultModal';
 import { GradientButton } from '../components/ui/GradientButton';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Link } from 'react-router-dom';
@@ -142,6 +143,7 @@ export const TopicView = () => {
     const [confidence, setConfidence] = useState(40);
     const [savedUnderstanding, setSavedUnderstanding] = useState<{ value: number; label: string } | null>(null);
     const [mockTestModalOpen, setMockTestModalOpen] = useState(false);
+    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
     const { saveUnderstanding, getByTopic } = useUnderstanding();
     const { addNotification } = useNotifications();
     const { startTracking, stopTracking, elapsedTime, getInsight, getTotalLearningHours, getTopicTime } = useLearningTimer();
@@ -605,7 +607,7 @@ export const TopicView = () => {
                         </div>
 
                         {/* 4 Explanation Type Cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             {explanationMeta.map((option) => {
                                 const isSelected = selectedExplanation === option.id;
                                 return (
@@ -1108,7 +1110,18 @@ export const TopicView = () => {
                                         <p className="text-xs text-emerald-600 mt-2">This is your final result. Only one attempt allowed.</p>
                                     </div>
                                     <button
-                                        onClick={() => navigate('/mock-test-results')}
+                                        onClick={() => {
+                                            const userKey = `edutwin-mock-results_${user?.id || 'guest'}`;
+                                            const stored = localStorage.getItem(userKey);
+                                            const results = stored ? JSON.parse(stored) : [];
+                                            const prevResult = results.find((r: any) => r.topicId === topicId);
+                                            
+                                            // Prefer localStorage result if it exists as it has detailed questionReview
+                                            if (prevResult) {
+                                                setTestResult(prevResult);
+                                            }
+                                            setIsResultModalOpen(true);
+                                        }}
                                         className="flex-shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-colors"
                                     >
                                         View Details
@@ -1116,15 +1129,13 @@ export const TopicView = () => {
                                 </div>
                             </GlassCard>
                         ) : (
-                            <button
+                            <GradientButton
                                 onClick={() => setMockTestModalOpen(true)}
-                                className="w-full"
+                                className="group text-lg px-8 py-4 w-full justify-center"
                             >
-                                <GradientButton className="group text-lg px-8 py-4 w-full justify-center">
-                                    Take Topic Test
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </GradientButton>
-                            </button>
+                                Take Topic Test
+                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            </GradientButton>
                         )}
                     </motion.div>
 
@@ -1182,6 +1193,12 @@ export const TopicView = () => {
 
                 </div>
             </PageWrapper>
+            
+            <TestResultModal 
+                isOpen={isResultModalOpen} 
+                onClose={() => setIsResultModalOpen(false)} 
+                result={testResult} 
+            />
         </>
     );
 };

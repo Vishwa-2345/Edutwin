@@ -240,7 +240,7 @@ export const VideoRecommendations = () => {
                     </motion.div>
 
                     {/* Stats Summary */}
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-2 gap-4">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <GlassCard className="p-4 flex items-center gap-3">
                             <div className="p-2.5 bg-brand/10 rounded-xl"><BookOpen className="w-5 h-5 text-brand" /></div>
                             <div>
