@@ -7,7 +7,8 @@ python-dotenv
 requests
 httpx
 passlib[bcrypt]
-pyjwt
+python-jose[cryptography]
 google-api-python-client
 google-genai
 python-multipart
+reportlab
