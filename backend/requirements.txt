@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+motor
+pydantic
+pydantic-settings
+python-dotenv
+requests
+httpx
+passlib[bcrypt]
+pyjwt
+google-api-python-client
+google-genai
+python-multipart
