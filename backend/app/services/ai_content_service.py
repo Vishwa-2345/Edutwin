@@ -36,7 +36,8 @@ class AIContentGenerator:
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 8192,
-        retries: int = 3
+        retries: int = 3,
+        json_mode: bool = False
     ) -> str:
         """Call Gemini API with retry logic and 503/429 backoff"""
 
@@ -44,6 +45,13 @@ class AIContentGenerator:
             try:
                 url = f"{self.base_url}/models/{self.model}:generateContent"
                 params = {"key": self.api_key}
+
+                generation_config = {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                }
+                if json_mode:
+                    generation_config["responseMimeType"] = "application/json"
 
                 payload = {
                     "contents": [
@@ -53,10 +61,7 @@ class AIContentGenerator:
                             ]
                         }
                     ],
-                    "generationConfig": {
-                        "temperature": temperature,
-                        "maxOutputTokens": max_tokens,
-                    }
+                    "generationConfig": generation_config
                 }
 
                 async with httpx.AsyncClient(timeout=60.0) as client:
@@ -92,10 +97,25 @@ class AIContentGenerator:
     def _clean_json(self, text: str) -> str:
         """Extract JSON from response, removing markdown code blocks"""
         text = text.strip()
+        # If it's already raw JSON, return it
+        if text.startswith("{") and text.endswith("}"):
+            return text
+        if text.startswith("[") and text.endswith("]"):
+            return text
+            
         if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
+            # Get the last ```json block to avoid inner blocks
+            text = text.split("```json")[-1].split("```")[0]
         elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
+            # Check if there is a block that looks like JSON
+            blocks = text.split("```")
+            for block in blocks:
+                stripped = block.strip()
+                if (stripped.startswith("{") and stripped.endswith("}")) or \
+                   (stripped.startswith("[") and stripped.endswith("]")):
+                    return stripped
+            # Fallback to the original logic
+            text = blocks[1] if len(blocks) > 1 else text
         return text.strip()
     
     async def generate_study_material(
@@ -124,7 +144,7 @@ Provide information as valid JSON with these fields:
 Return ONLY valid JSON object, no markdown code blocks."""
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=2048)
+            response = await self.call_gemini(prompt, max_tokens=2048, json_mode=True)
             response = self._clean_json(response)
             
             try:
@@ -250,7 +270,7 @@ IMPORTANT: Output ONLY the JSON array starting with [ and ending with ]. Nothing
 """
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=8192)
+            response = await self.call_gemini(prompt, max_tokens=8192, json_mode=True)
             response = self._clean_json(response)
 
             
@@ -382,7 +402,7 @@ Return ONLY valid JSON in this exact structure:
 }}"""
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=3000)
+            response = await self.call_gemini(prompt, max_tokens=3000, json_mode=True)
             response = self._clean_json(response)
             test_data = json.loads(response)
             
@@ -429,7 +449,7 @@ Provide recommendations in JSON format:
 Make recommendations specific, actionable, and encouraging."""
         
         try:
-            response = await self.call_gemini(prompt, temperature=0.6, max_tokens=1000)
+            response = await self.call_gemini(prompt, temperature=0.6, max_tokens=1000, json_mode=True)
             response = self._clean_json(response)
             recommendations = json.loads(response)
             return recommendations
