@@ -4,7 +4,7 @@ import { Clock, AlertTriangle, Send, ChevronLeft, ChevronRight, BookOpen, Flag }
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { MockTestResults } from './MockTestResults';
+import { TestResultModal } from './TestResultModal';
 
 interface Question {
   id: string;
@@ -278,7 +278,13 @@ export const MockTest = ({
   }
 
   if (submitted && testResults) {
-    return <MockTestResults testResults={testResults} />;
+    return (
+      <TestResultModal 
+        isOpen={true} 
+        onClose={() => navigate('/dashboard/mock-tests')} 
+        result={testResults} 
+      />
+    );
   }
 
   const currentQuestion = questions[currentIndex];
