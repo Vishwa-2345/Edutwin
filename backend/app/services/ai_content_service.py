@@ -32,19 +32,27 @@ class AIContentGenerator:
         self.base_url = settings.GEMINI_BASE_URL
     
     async def call_gemini(
-        self, 
-        prompt: str, 
-        temperature: float = 0.7, 
-        max_tokens: int = 2048,
-        retries: int = 3
+        self,
+        prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
+        retries: int = 3,
+        json_mode: bool = False
     ) -> str:
-        """Call Gemini API with retry logic"""
-        
+        """Call Gemini API with retry logic and 503/429 backoff"""
+
         for attempt in range(retries):
             try:
                 url = f"{self.base_url}/models/{self.model}:generateContent"
                 params = {"key": self.api_key}
-                
+
+                generation_config = {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                }
+                if json_mode:
+                    generation_config["responseMimeType"] = "application/json"
+
                 payload = {
                     "contents": [
                         {
@@ -53,47 +61,61 @@ class AIContentGenerator:
                             ]
                         }
                     ],
-                    "generationConfig": {
-                        "temperature": temperature,
-                        "maxOutputTokens": max_tokens,
-                    }
+                    "generationConfig": generation_config
                 }
-                
-                async with httpx.AsyncClient(timeout=30.0) as client:
+
+                async with httpx.AsyncClient(timeout=60.0) as client:
                     response = await client.post(url, params=params, json=payload)
-                    
+
                     if response.status_code == 200:
                         data = response.json()
                         if "candidates" in data and len(data["candidates"]) > 0:
                             return data["candidates"][0]["content"]["parts"][0]["text"]
-                    
-                    elif response.status_code == 429:  # Rate limit
+
+                    elif response.status_code in (429, 503):  # Rate limit or overload
+                        wait = 2 ** attempt
+                        logger.warning(f"Gemini {response.status_code} – retrying in {wait}s (attempt {attempt+1}/{retries})")
                         if attempt < retries - 1:
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                            await asyncio.sleep(wait)
                             continue
-                    
-                    logger.error(f"Gemini API error {response.status_code}: {response.text[:200]}")
-                    
+
+                    logger.error(f"Gemini API error {response.status_code}: {response.text[:300]}")
+
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout attempt {attempt + 1}/{retries}")
                 if attempt < retries - 1:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
                     continue
             except Exception as e:
                 logger.error(f"Error calling Gemini: {e}")
                 if attempt < retries - 1:
                     await asyncio.sleep(1)
                     continue
-        
+
         return ""
     
     def _clean_json(self, text: str) -> str:
         """Extract JSON from response, removing markdown code blocks"""
         text = text.strip()
+        # If it's already raw JSON, return it
+        if text.startswith("{") and text.endswith("}"):
+            return text
+        if text.startswith("[") and text.endswith("]"):
+            return text
+            
         if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
+            # Get the last ```json block to avoid inner blocks
+            text = text.split("```json")[-1].split("```")[0]
         elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
+            # Check if there is a block that looks like JSON
+            blocks = text.split("```")
+            for block in blocks:
+                stripped = block.strip()
+                if (stripped.startswith("{") and stripped.endswith("}")) or \
+                   (stripped.startswith("[") and stripped.endswith("]")):
+                    return stripped
+            # Fallback to the original logic
+            text = blocks[1] if len(blocks) > 1 else text
         return text.strip()
     
     async def generate_study_material(
@@ -122,7 +144,7 @@ Provide information as valid JSON with these fields:
 Return ONLY valid JSON object, no markdown code blocks."""
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=2048)
+            response = await self.call_gemini(prompt, max_tokens=2048, json_mode=True)
             response = self._clean_json(response)
             
             try:
@@ -199,53 +221,58 @@ Return ONLY valid JSON object, no markdown code blocks."""
         self,
         topic_name: str,
         num_questions: int = 5,
-        difficulty: str = "mixed",
+        difficulty: str = "medium",
         history: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
-        """Generate multiple-choice quiz questions"""
+        """Generate multiple-choice quiz questions strictly about the given topic"""
         
-        history_str = ""
+        history_note = ""
         if history:
-            history_str = f"\n\nCRITICAL: DO NOT repeat or generate any of these previous questions:\n" + "\n".join([f"- {h}" for h in history])
+            history_note = (
+                "\n\nANTI-REPEAT: These questions were ALREADY asked. Do NOT regenerate them:\n"
+                + "\n".join([f"- {h}" for h in history])
+            )
 
-        prompt = f"""TASK: Generate {num_questions} quiz questions about {topic_name}.{history_str}
+        difficulty_guidance = {
+            "easy": "Beginner-level: test basic definitions, syntax, and simple usage.",
+            "medium": "Intermediate-level: test understanding of concepts, common patterns, and practical usage.",
+            "hard": "Advanced-level: test edge cases, internals, performance implications, and complex scenarios.",
+            "mixed": "Mix of easy, medium, and hard questions — distribute roughly equally.",
+        }.get(difficulty, "medium-level concepts")
 
-OUTPUT FORMAT - JSON ARRAY ONLY (no other text, no markdown):
+        prompt = f"""You are an expert programming quiz generator.
+
+Generate EXACTLY {num_questions} high-quality multiple-choice quiz questions STRICTLY about the topic: "{topic_name}".
+
+DIFFICULTY: {difficulty} — {difficulty_guidance}
+{history_note}
+
+STRICT RULES:
+1. ALL questions MUST be 100% specific to "{topic_name}". Do NOT ask about unrelated topics.
+2. Every question MUST have exactly 4 distinct options.
+3. The correct answer MUST be factually accurate and unambiguous.
+4. The explanation MUST clearly justify WHY the correct answer is right.
+5. Cover different sub-concepts within "{topic_name}" — no two questions should test the same sub-concept.
+6. CRITICAL OPTIONS VARIETY: Every single question MUST have completely unique options. Do NOT reuse the same set of options across different questions.
+7. difficulty field must be one of: "easy", "medium", or "hard" — NOT "mixed".
+OUTPUT FORMAT — Return ONLY a raw JSON array. No markdown, no code blocks, nothing else:
 [
   {{
-    "question": "question text",
-    "options": ["opt1", "opt2", "opt3", "opt4"],
-    "correctAnswer": 0,
-    "explanation": "explanation",
+    "question": "Which method is used to add an element to the end of a Python list?",
+    "options": ["list.add()", "list.append()", "list.insert()", "list.push()"],
+    "correctAnswer": 1,
+    "explanation": "list.append() adds an element to the END of the list. insert() requires an index. add() and push() are not valid Python list methods.",
     "difficulty": "easy"
   }}
 ]
 
-REQUIREMENTS:
-- Exactly {num_questions} questions in array
-- Each question must have exactly 4 unique options
-- correctAnswer is 0, 1, 2, or 3 (index of correct option)
-- difficulty: easy|medium|hard (not "mixed")
-- explanation: one simple sentence
-- If all easy questions on this topic are exhausted, move to medium/hard variants.
-
-### ANTI-REPEAT SYSTEM:
-- Maintain a running list of ALL questions you have asked in this entire conversation.
-- Before generating any new question, check that list.
-- If a similar question (same concept, same answer, or same wording) was already asked — SKIP it and generate a different one.
-- Never ask the same concept twice even if the wording is slightly different.
-- Treat each question as UNIQUE by tracking: topic + concept + correct answer combination.
-
-PREVIOUS QUESTIONS FOR {topic_name}:
-{history_str}
-
-CRITICAL: Output ONLY the JSON array. Nothing else. No markdown. No code blocks. Start with [ end with ].
-Perform a FINAL CHECK: if any generated question matches a previous concept, REWRITE IT.
+IMPORTANT: Output ONLY the JSON array starting with [ and ending with ]. Nothing else.
 """
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=2048)
+            response = await self.call_gemini(prompt, max_tokens=8192, json_mode=True)
             response = self._clean_json(response)
+
             
             # Try to parse JSON
             try:
@@ -375,7 +402,7 @@ Return ONLY valid JSON in this exact structure:
 }}"""
         
         try:
-            response = await self.call_gemini(prompt, max_tokens=3000)
+            response = await self.call_gemini(prompt, max_tokens=3000, json_mode=True)
             response = self._clean_json(response)
             test_data = json.loads(response)
             
@@ -422,7 +449,7 @@ Provide recommendations in JSON format:
 Make recommendations specific, actionable, and encouraging."""
         
         try:
-            response = await self.call_gemini(prompt, temperature=0.6, max_tokens=1000)
+            response = await self.call_gemini(prompt, temperature=0.6, max_tokens=1000, json_mode=True)
             response = self._clean_json(response)
             recommendations = json.loads(response)
             return recommendations

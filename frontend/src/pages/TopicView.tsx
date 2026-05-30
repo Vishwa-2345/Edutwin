@@ -605,7 +605,7 @@ export const TopicView = () => {
                         </div>
 
                         {/* 4 Explanation Type Cards */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             {explanationMeta.map((option) => {
                                 const isSelected = selectedExplanation === option.id;
                                 return (
@@ -1116,15 +1116,13 @@ export const TopicView = () => {
                                 </div>
                             </GlassCard>
                         ) : (
-                            <button
+                            <GradientButton
                                 onClick={() => setMockTestModalOpen(true)}
-                                className="w-full"
+                                className="group text-lg px-8 py-4 w-full justify-center"
                             >
-                                <GradientButton className="group text-lg px-8 py-4 w-full justify-center">
-                                    Take Topic Test
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </GradientButton>
-                            </button>
+                                Take Topic Test
+                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            </GradientButton>
                         )}
                     </motion.div>
 

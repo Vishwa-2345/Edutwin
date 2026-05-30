@@ -190,20 +190,21 @@ class AdaptiveEngineService:
     async def _call_gemini_text(
         self,
         prompt: str,
-        max_tokens: int = 1200,
+        max_tokens: int = 4096,
         temperature: float = 0.8,
-        timeout: float = 30.0,
+        timeout: float = 60.0,
         retries: int = 3
     ) -> str:
         """Call Gemini API for text generation (non-JSON) with retry logic"""
         if not self.api_key:
             logger.warning("Gemini API key not configured")
             return ""
-        
+
         url = f"{self.base_url}/models/{self.model}:generateContent"
-        
+
         for attempt in range(retries):
             try:
+                import asyncio
                 params = {"key": self.api_key}
                 payload = {
                     "contents": [
@@ -218,27 +219,30 @@ class AdaptiveEngineService:
                         "maxOutputTokens": max_tokens,
                     },
                 }
-                
+
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     res = await client.post(url, params=params, json=payload)
-                    
-                    # Handle rate limiting with retry
-                    if res.status_code == 429:
-                        logger.warning(f"Rate limited, attempt {attempt + 1}/{retries}")
+
+                    # Handle rate limiting and model overload with retry
+                    if res.status_code in (429, 503):
+                        wait = 2 ** attempt
+                        logger.warning(f"Gemini {res.status_code} – retrying in {wait}s (attempt {attempt + 1}/{retries})")
                         if attempt < retries - 1:
-                            import asyncio
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                            await asyncio.sleep(wait)
                             continue
-                    
+                        # All retries exhausted
+                        logger.error(f"Gemini API {res.status_code} after all retries")
+                        return ""
+
                     if res.status_code in [400, 401, 403]:
                         error_data = res.json() if res.text else {}
                         error_msg = error_data.get("error", {}).get("message", "Unknown error")
                         logger.error(f"Gemini auth error {res.status_code}: {error_msg}")
                         return ""
-                    
+
                     res.raise_for_status()
                     data = res.json()
-                    
+
                     # Extract text from response
                     try:
                         text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -247,12 +251,12 @@ class AdaptiveEngineService:
                     except (KeyError, IndexError, TypeError) as parse_error:
                         logger.error(f"Failed to parse Gemini response: {parse_error}. Raw: {data}")
                         return ""
-                        
+
             except httpx.TimeoutException as e:
                 logger.warning(f"Gemini API timeout (attempt {attempt + 1}/{retries}): {e}")
                 if attempt < retries - 1:
                     import asyncio
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
                     continue
                 return ""
             except httpx.HTTPStatusError as e:
@@ -265,9 +269,10 @@ class AdaptiveEngineService:
                     await asyncio.sleep(1)
                     continue
                 return ""
-        
+
         logger.error("Gemini API failed after all retries")
         return ""
+
 
     async def chat(
         self,
@@ -341,19 +346,21 @@ INTERACTION GUIDELINES (CRITICAL):
 - Show you understand their casual style by being relatable but still professional in YOUR response
 
 PROGRESSIVE LEARNING APPROACH (IMPORTANT):
-- If user asks about Python GENERALLY (like "explain Python" or "what is Python"):
-  * FIRST: Define Python clearly (what it is, why it's useful)
-  * THEN: Ask specifically which Python topic they want to learn
-  * THEN: List 6-8 beginner-friendly Python topics to choose from
-  * DON'T jump straight to detailed explanation without asking
-  
-- If user asks about a SPECIFIC Python topic (like "explain for loops" or "what are variables"):
-  * DIRECTLY provide DETAILED explanation with multiple examples
-  * Follow the structured format exactly
-  * Go deep into the topic
+- If user asks a SPECIFIC question about a technology (like "why need to learn Java?", "what are advantages of Python?", "how do for loops work?", "difference between x and y"):
+  * Treat this as a SPECIFIC/DETAILED question.
+  * DIRECTLY provide a DETAILED explanation answering exactly what they asked.
+  * Follow the structured format for SPECIFIC questions exactly.
+  * Do NOT start with a generic "What is X" definition. Do NOT list 6-8 subtopics. Just answer the exact question!
 
-- Examples of GENERAL Python questions: "What is Python?", "Tell me about Python", "Python basics", "Explain Python"
-- Examples of SPECIFIC Python topics: "for loops", "functions", "lists", "dictionaries", "variables", "classes", "recursion"
+- If user asks about a TECHNOLOGY GENERALLY (just the name, or "explain Java", "tell me about HTML"):
+  * Treat this as a GENERAL/INTRO question.
+  * FIRST: Define the technology clearly (what it is, why it's useful, why learn it)
+  * THEN: Ask specifically which sub-topic they want to learn
+  * THEN: List 6-8 beginner-friendly sub-topics to choose from
+  * DON'T jump straight to detailed explanation without asking
+
+- Examples of GENERAL requests: "Java", "Tell me about HTML", "React basics", "Explain Python"
+- Examples of SPECIFIC requests: "Why need to learn Java?", "for loops", "functions", "div tags", "useState", "what are the advantages of python"
 
 ❌ DON'T DO THIS:
 - Be cold or dismissive
@@ -378,33 +385,32 @@ User says: "bet, can you help me debug this code deadass"
 You understand as: "Sure, please help me debug this code seriously."
 You respond with: Structured debugging help with examples
 
-EXAMPLE - PROGRESSIVE LEARNING FOR GENERAL PYTHON:
-User says: "explain python"
+EXAMPLE - PROGRESSIVE LEARNING FOR GENERAL TOPIC:
+User says: "explain java"
 You respond with:
-### 📚 What is Python?
-[Define Python in 2-3 sentences]
+### 📚 What is Java?
+[Define Java in 2-3 sentences]
 
-### 🎯 Why Python is Awesome
-- Point 1: Easy to learn
-- Point 2: Powerful
+### 🎯 Why Learn Java
+- Point 1: Platform independence (Write once, run anywhere)
+- Point 2: Powerful and widely used
 - etc.
 
 ### 💡 Popular Uses
-- Web development
-- Data science
-- Automation
-- AI/Machine Learning
+- Enterprise backend systems
+- Android app development
+- Large-scale applications
 
-### 🚀 Which Python Topic Would You Like to Learn?
+### 🚀 Which Java Topic Would You Like to Learn?
 Pick one of these beginner-friendly topics:
 1. **Variables & Data Types** - Store and work with information
 2. **If/Else Statements** - Make decisions in code
-3. **For Loops** - Repeat code multiple times
-4. **While Loops** - Repeat until something happens
-5. **Functions** - Organize reusable code
-6. **Lists** - Work with multiple items
-7. **Dictionaries** - Organize data with labels
-8. **String Operations** - Work with text
+3. **For/While Loops** - Repeat code multiple times
+4. **Classes & Objects** - The core of Object-Oriented Programming
+5. **Methods** - Organize reusable code
+6. **Arrays** - Work with multiple items
+7. **Inheritance** - Reuse class properties
+8. **Exceptions** - Handle errors gracefully
 
 What sounds interesting to you? Just say the number or the topic name!
 
@@ -493,12 +499,12 @@ CRITICAL RULES:
 - Never re-introduce yourself after first turn"""
             
             # Generate complete English response
-            logger.debug(f"Requesting English response from Gemini (timeout: 30s, retries: 3)")
+            logger.debug(f"Requesting English response from Gemini (timeout: 60s, retries: 3)")
             english_response = await self._call_gemini_text(
                 english_prompt,
-                max_tokens=2000,
+                max_tokens=4096,
                 temperature=0.8,
-                timeout=30.0,
+                timeout=60.0,
                 retries=3
             )
             

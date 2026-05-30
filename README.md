@@ -39,7 +39,6 @@ Pixel Pirates is a full-stack educational web application that provides personal
 ```text
 pixel-pirates/
 ├── backend/                 # FastAPI Backend
-│   ├── .env                 # Backend environment variables
 │   ├── app/                 # Application source code
 │   ├── docs/                # Backend specific documentation
 │   ├── scripts/             # Utility and database seeding scripts
@@ -109,42 +108,7 @@ npm run dev
 
 Once the backend is running, visit `http://localhost:8000/docs` for the interactive Swagger UI API documentation.
 
-## ⚙️ Environment Variables Configuration
 
-Create a `.env` file in the `backend/` directory with the following variables:
-
-```ini
-# YouTube API Configuration
-YOUTUBE_API_KEY=your-youtube-api-key
-
-# OpenRouter API Configuration
-OPENROUTER_API_KEY=your-openrouter-api-key
-OPENROUTER_MODEL=mistralai/mistral-7b-instruct
-
-# Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
-
-# Gemini API Configuration
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
-GEMINI_MODEL=gemini-2.0-flash
-
-# JWT Authentication
-JWT_SECRET_KEY=your-secret-key-change-this-in-production
-
-# Security
-SECRET_KEY=your-app-secret-key
-
-# Application URLs
-API_BASE_URL=http://localhost:5000
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-
-# Database Configuration
-DATABASE_URL=sqlite:///./pixel_pirates.db
-MONGODB_URL=mongodb://localhost:27017/
-MONGODB_DATABASE=pixel_pirates
-```
 
 ## 📄 License
 

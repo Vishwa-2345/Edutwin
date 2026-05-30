@@ -247,6 +247,7 @@ export const MockTest = () => {
     const [totalTime, setTotalTime] = useState(0);
     const [score, setScore] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string>('');
     const [testAlreadyCompleted, setTestAlreadyCompleted] = useState(false);
 
     // Setup options
@@ -422,18 +423,19 @@ export const MockTest = () => {
                             const filteredByType = mapped.filter((q: MockQuestion) => selectedTypes.includes(q.type));
                             preparedQuestions = buildBalancedQuestionSet(filteredByType, selectedTypes, questionCount);
                             
-                            if (preparedQuestions.length === questionCount) {
+                            // Even if it generated fewer questions, use what we have to prevent DB fallback.
+                            if (preparedQuestions.length > 0) {
                                 setQuestions(preparedQuestions);
                             } else {
-                                throw new Error(`Expected ${questionCount} questions, got ${preparedQuestions.length}`);
+                                throw new Error(`Expected some questions, got ${preparedQuestions.length}`);
                             }
                         } else {
                             throw new Error('AI returned no questions');
                         }
                     } catch (aiError: any) {
-                        console.warn(`⚠️ AI custom topic failed: ${aiError?.message}. Falling back to mock test...`);
+                        console.warn(`⚠️ AI custom topic failed: ${aiError?.message}. Falling back to mock test API...`);
                         
-                        // Fallback to generic mock test
+                        // Fallback to generic mock test API
                         const res = await quizAPI.mockTest({
                             topics: [topicFilter],
                             difficulty_mix: { Beginner: Math.ceil(questionCount * 0.3), Intermediate: Math.ceil(questionCount * 0.5), Advanced: Math.max(1, questionCount - Math.ceil(questionCount * 0.3) - Math.ceil(questionCount * 0.5)) },
@@ -445,14 +447,10 @@ export const MockTest = () => {
                             const filteredByType = mapped.filter((q: MockQuestion) => selectedTypes.includes(q.type));
                             preparedQuestions = buildBalancedQuestionSet(filteredByType, selectedTypes, questionCount);
                             
-                            if (preparedQuestions.length < questionCount) {
-                                preparedQuestions = await fillWithUniqueTopicBankQuestions(preparedQuestions, questionCount, selectedTypes);
-                            }
-                            
-                            if (preparedQuestions.length === questionCount) {
+                            if (preparedQuestions.length > 0) {
                                 setQuestions(preparedQuestions);
                             } else {
-                                throw new Error('Could not build the requested number of unique questions from API results');
+                                throw new Error('Could not build requested questions from API results');
                             }
                         } else {
                             throw new Error('No questions from API');
@@ -462,20 +460,17 @@ export const MockTest = () => {
                     throw new Error('Topic is required to generate questions');
                 }
             }
-        } catch {
-            // Use sample questions filtered by type
-                const fallbackTypes: QuestionType[] = isTopicContextTest ? ['mcq'] : selectedTypes;
-            const fallbackCount = isTopicContextTest ? 5 : questionCount;
-            const filtered = dedupeQuestions(SAMPLE_QUESTIONS.filter(q => fallbackTypes.includes(q.type)));
-            preparedQuestions = buildBalancedQuestionSet(filtered.length > 0 ? filtered : SAMPLE_QUESTIONS, fallbackTypes, fallbackCount);
-            if (!isTopicContextTest && preparedQuestions.length < fallbackCount) {
-                preparedQuestions = await fillWithUniqueTopicBankQuestions(preparedQuestions, fallbackCount, fallbackTypes);
-            }
-            setQuestions(preparedQuestions);
+        } catch (error: any) {
+            console.error("Test generation failed entirely:", error);
+            setError(error.message || "Failed to generate mock test. Please try again.");
+            setQuestions([]);
+            setLoading(false);
+            return; // Do NOT switch to active mode if there's an error
         } finally {
             setLoading(false);
         }
 
+        setError(''); // Clear any previous errors
         setAnswers({});
         setCurrentIdx(0);
         setTimeLeft(testDuration * 60);
@@ -768,6 +763,16 @@ export const MockTest = () => {
                                 </GlassCard>
                             </div>
 
+                            {error && (
+                                <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-700 max-w-2xl mx-auto">
+                                    <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-semibold text-sm">Error Generating Test</p>
+                                        <p className="text-sm mt-1">{error}</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-center">
                                 <GradientButton
                                     onClick={startTest}
@@ -988,12 +993,19 @@ export const MockTest = () => {
                                     >
                                         <BarChart3 className="w-4 h-4" /> View Results
                                     </button>
-                                    {topicFilter && (
+                                    {topicId ? (
                                         <button
-                                            onClick={() => navigate(topicId ? `/topic?id=${topicId}${subtopicId ? `&subtopicId=${subtopicId}` : ''}` : `/topic?id=${topicFilter}`)}
+                                            onClick={() => navigate(`/topic?id=${topicId}${subtopicId ? `&subtopicId=${subtopicId}` : ''}`)}
                                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium text-sm transition-colors"
                                         >
                                             <ArrowLeft className="w-4 h-4" /> Back to Topic
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => navigate('/dashboard')}
+                                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium text-sm transition-colors"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                                         </button>
                                     )}
                                 </div>
