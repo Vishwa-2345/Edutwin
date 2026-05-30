@@ -442,44 +442,38 @@ async def get_topic_quiz(
     topic_name = topic.get("topicName") or topic.get("name", "Programming Concept")
     quiz_name = topic_name
     
-    # Try to get stored quiz first
-    quiz = topic.get("quiz", [])
+    # ALWAYS generate using AI first to ensure dynamic, relevant questions
+    try:
+        from app.services.ai_content_service import ai_generator
+        import logging
+        _log = logging.getLogger(__name__)
+        _log.info(f"Generating AI quiz for {topic_name}")
+        
+        # Generate fresh AI questions
+        questions = await ai_generator.generate_quiz_questions(
+            topic_name=quiz_name,
+            num_questions=5,
+            difficulty=topic.get("difficulty", "mixed")
+        )
+        
+        if questions and len(questions) > 0:
+            quiz = questions
+            _log.info(f"Generated {len(questions)} AI questions for {topic_name}")
+        else:
+            raise Exception("AI returned empty questions")
+    except Exception as e:
+        import logging
+        _log = logging.getLogger(__name__)
+        _log.error(f"Failed to generate AI quiz for {topic_name}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to generate AI quiz for '{topic_name}'. Please try again."
+        )
     
-    if subtopicId:
-        for sub in topic.get("subtopics", []):
-            if sub.get("id") == subtopicId:
-                quiz = sub.get("quiz", quiz)
-                quiz_name = sub.get("name", topic_name)
-                break
-    
-    # If no stored quiz or it's empty, generate using AI
-    if not quiz or len(quiz) == 0:
-        try:
-            from app.services.ai_content_service import ai_generator
-            import logging
-            _log = logging.getLogger(__name__)
-            _log.info(f"No stored quiz found. Generating AI quiz for {topic_name}")
-            
-            # Generate fresh AI questions
-            questions = await ai_generator.generate_quiz_questions(
-                topic_name=topic_name,
-                num_questions=5,
-                difficulty=topic.get("difficulty", "mixed")
-            )
-            
-            if questions:
-                quiz = questions
-                _log.info(f"Generated {len(questions)} AI questions for {topic_name}")
-        except Exception as e:
-            import logging
-            _log = logging.getLogger(__name__)
-            _log.warning(f"Failed to generate AI quiz for {topic_name}: {e}")
-            # Fall through with empty quiz, which will be handled below
-    
-    # Return whatever we have (stored, AI-generated, or empty)
+    # Return AI-generated questions
     return SuccessResponse(
         success=True,
-        message="Quiz questions retrieved successfully",
+        message="Quiz questions retrieved successfully (AI Generated)",
         data={
             "topicId": topic_id,
             "topicName": quiz_name,

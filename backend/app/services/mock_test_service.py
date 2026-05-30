@@ -156,9 +156,9 @@ Return ONLY a valid JSON array. No markdown, no code blocks, no extra text:
             except Exception as e:
                 logger.warning(f"⚠️  OpenRouter API error: {e}")
         
-        # Step 3: Fall back to synthetic questions
-        logger.warning(f"⚠️  All AI APIs failed, using synthetic questions for {topic_name}")
-        return self._create_fallback_questions(topic_name, num_questions)
+        # Step 3: All failed
+        logger.error(f"⚠️  All AI APIs failed to generate mock test for {topic_name}")
+        raise ValueError(f"Failed to generate AI questions for {topic_name}. Please try again later.")
     
     async def _generate_with_openrouter(self, prompt: str, num_questions: int) -> Optional[List[Dict[str, Any]]]:
         """Generate questions using OpenRouter API (Claude or similar)"""
