@@ -247,6 +247,7 @@ export const MockTest = () => {
     const [totalTime, setTotalTime] = useState(0);
     const [score, setScore] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string>('');
     const [testAlreadyCompleted, setTestAlreadyCompleted] = useState(false);
 
     // Setup options
@@ -459,15 +460,17 @@ export const MockTest = () => {
                     throw new Error('Topic is required to generate questions');
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Test generation failed entirely:", error);
-            // Fallback to an empty array so it doesn't show random questions.
-            // UI will say "No questions available" and give a button to go back.
+            setError(error.message || "Failed to generate mock test. Please try again.");
             setQuestions([]);
+            setLoading(false);
+            return; // Do NOT switch to active mode if there's an error
         } finally {
             setLoading(false);
         }
 
+        setError(''); // Clear any previous errors
         setAnswers({});
         setCurrentIdx(0);
         setTimeLeft(testDuration * 60);
@@ -760,6 +763,16 @@ export const MockTest = () => {
                                 </GlassCard>
                             </div>
 
+                            {error && (
+                                <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-700 max-w-2xl mx-auto">
+                                    <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-semibold text-sm">Error Generating Test</p>
+                                        <p className="text-sm mt-1">{error}</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-center">
                                 <GradientButton
                                     onClick={startTest}
@@ -980,12 +993,19 @@ export const MockTest = () => {
                                     >
                                         <BarChart3 className="w-4 h-4" /> View Results
                                     </button>
-                                    {topicFilter && (
+                                    {topicId ? (
                                         <button
-                                            onClick={() => navigate(topicId ? `/topic?id=${topicId}${subtopicId ? `&subtopicId=${subtopicId}` : ''}` : `/topic?id=${topicFilter}`)}
+                                            onClick={() => navigate(`/topic?id=${topicId}${subtopicId ? `&subtopicId=${subtopicId}` : ''}`)}
                                             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium text-sm transition-colors"
                                         >
                                             <ArrowLeft className="w-4 h-4" /> Back to Topic
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => navigate('/dashboard')}
+                                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium text-sm transition-colors"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                                         </button>
                                     )}
                                 </div>

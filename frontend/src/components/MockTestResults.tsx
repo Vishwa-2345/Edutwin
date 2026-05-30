@@ -231,7 +231,7 @@ export const MockTestResults = ({ testResults }: MockTestResultsProps) => {
           <div className="space-y-3">
             {testResults.questionReview.map((q, idx) => (
               <motion.div
-                key={q.id}
+                key={q.id || `q-rev-${idx}`}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}

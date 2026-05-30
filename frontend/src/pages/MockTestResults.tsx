@@ -197,7 +197,7 @@ export const MockTestResults = () => {
                             <div className="space-y-3 max-h-96 overflow-y-auto">
                                 {results.map((result, idx) => (
                                     <motion.button
-                                        key={result.id}
+                                        key={result.id || `result-${idx}`}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setSelectedResultId(result.id)}
@@ -377,7 +377,7 @@ export const MockTestResults = () => {
                                     const maxWidth = Math.max(...results.map(r => r.percentage));
                                     const width = (result.percentage / maxWidth) * 100;
                                     return (
-                                        <div key={result.id}>
+                                        <div key={result.id || `trend-${idx}`}>
                                             <div className="flex justify-between mb-1">
                                                 <span className="text-sm font-medium text-gray-600">Test {results.length - idx}</span>
                                                 <span className="text-sm font-bold text-gray-800">{result.percentage}%</span>
