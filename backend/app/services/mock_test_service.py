@@ -28,11 +28,10 @@ class MockTestSecurityService:
     """Handles all mock test security and generation"""
     
     def __init__(self):
-                """Synchronous wrapper for Gemini API call"""
-        if not self.genai_client:
-            raise Exception("Gemini API key not configured")
-
-        from google.genai import types
+        self.genai_client = genai.Client(api_key=settings.GEMINI_API_KEY) if settings.GEMINI_API_KEY else None
+        # genai SDK needs the model name without "models/" prefix
+        raw_model = settings.GEMINI_MODEL
+        self.gemini_model = raw_model if not raw_model.startswith("models/") else raw_model.split("/", 1)[1]
         self.openrouter_api_key = settings.OPENROUTER_API_KEY
         self.openrouter_model = settings.OPENROUTER_MODEL
         self.max_violations = 10
