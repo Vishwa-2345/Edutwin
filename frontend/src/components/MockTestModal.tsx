@@ -174,24 +174,64 @@ export const MockTestModal = ({
                     }
                 }
                 
-                // Find and update existing result for this topic, or add new one
-                const resultIndex = results.findIndex((r: any) => r.topicId === topicId || r.topic === topicId);
-                const testResult = {
+                // Build a richer result object compatible with MockTestResults page
+                const createdAt = new Date().toISOString();
+                const id = String(Date.now());
+
+                // Build question review array
+                let correctCount = 0;
+                const questionReview = questions.map((q, idx) => {
+                    const userAnswerStr = answers[idx + 1];
+                    const userAnswerIdx = q.options.indexOf(userAnswerStr as string);
+                    const correctIdx = typeof q.correctIdx === 'number' ? q.correctIdx : q.options.indexOf(q.correctAnswer || '');
+                    const isCorrect = userAnswerIdx === correctIdx && userAnswerIdx !== -1;
+                    if (isCorrect) correctCount += 1;
+
+                    return {
+                        id: `${id}_${idx + 1}`,
+                        question: q.question,
+                        options: q.options,
+                        userAnswer: userAnswerIdx >= 0 ? userAnswerIdx : undefined,
+                        correctAnswer: correctIdx >= 0 ? correctIdx : 0,
+                        isCorrect,
+                        explanation: q.explanation || ''
+                    };
+                });
+
+                const answeredQuestions = Object.keys(answers).length;
+                const wrongCount = Math.max(0, questions.length - correctCount - (questions.length - answeredQuestions));
+                const skipped = questions.length - answeredQuestions;
+
+                const enrichedResult = {
+                    id,
+                    testId: id,
                     topicId,
                     topic: topicTitle,
                     score: totalScore,
-                    total: totalPoints,
+                    maxScore: totalPoints,
+                    totalQuestions: questions.length,
+                    answeredQuestions,
+                    correctAnswers: correctCount,
+                    wrongAnswers: wrongCount,
+                    skippedAnswers: skipped,
                     percentage: percentage,
+                    timeTakenSec: totalTime - timeLeft,
+                    timeSpent: totalTime - timeLeft,
+                    selectedTypes: Array.from(new Set(questions.map(q => q.type))),
+                    createdAt,
+                    timestamp: createdAt,
                     answers: answers,
-                    completedAt: new Date().toISOString()
+                    questionReview,
                 };
-                
+
+                // Find and update existing result for this topic, or add new one
+                const resultIndex = results.findIndex((r: any) => r.topicId === topicId || r.topic === topicId);
                 if (resultIndex >= 0) {
-                    results[resultIndex] = testResult;
+                    results[resultIndex] = enrichedResult;
                 } else {
-                    results.push(testResult);
+                    results.push(enrichedResult);
                 }
-                
+
                 localStorage.setItem(resultsKey, JSON.stringify(results));
             } catch (err) {
                 console.error('Failed to save result to localStorage:', err);

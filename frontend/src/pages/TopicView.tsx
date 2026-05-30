@@ -10,6 +10,7 @@ import { ConfidenceSlider } from '../components/learning/ConfidenceSlider';
 import { FlowchartExplanation } from '../components/learning/FlowchartExplanation';
 import type { FlowchartNode } from '../components/learning/FlowchartExplanation';
 import { MockTestModal } from '../components/MockTestModal';
+import TestResultModal from '../components/TestResultModal';
 import { GradientButton } from '../components/ui/GradientButton';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Link } from 'react-router-dom';
@@ -142,6 +143,7 @@ export const TopicView = () => {
     const [confidence, setConfidence] = useState(40);
     const [savedUnderstanding, setSavedUnderstanding] = useState<{ value: number; label: string } | null>(null);
     const [mockTestModalOpen, setMockTestModalOpen] = useState(false);
+    const [resultModalOpen, setResultModalOpen] = useState(false);
     const { saveUnderstanding, getByTopic } = useUnderstanding();
     const { addNotification } = useNotifications();
     const { startTracking, stopTracking, elapsedTime, getInsight, getTotalLearningHours, getTopicTime } = useLearningTimer();
@@ -1108,7 +1110,7 @@ export const TopicView = () => {
                                         <p className="text-xs text-emerald-600 mt-2">This is your final result. Only one attempt allowed.</p>
                                     </div>
                                     <button
-                                        onClick={() => navigate('/mock-test-results')}
+                                        onClick={() => setResultModalOpen(true)}
                                         className="flex-shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-colors"
                                     >
                                         View Details
@@ -1178,6 +1180,13 @@ export const TopicView = () => {
                                 }
                             }
                         }}
+                    />
+
+                    {/* Test Result Modal */}
+                    <TestResultModal
+                        isOpen={resultModalOpen}
+                        onClose={() => setResultModalOpen(false)}
+                        result={testResult}
                     />
 
                 </div>

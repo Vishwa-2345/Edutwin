@@ -7,6 +7,7 @@ Every write function also persists the change to MongoDB.
 
 from typing import List, Dict, Any, Optional
 import logging, pymongo
+from app.core.config import settings as core_settings
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -30,9 +31,13 @@ def _get_db():
     if _db is not None:
         return _db
     try:
-        _mongo_client = pymongo.MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=3000)
+        # Use configured MongoDB URL and database name from Settings
+        mongo_url = getattr(core_settings, "MONGODB_URL", "mongodb://localhost:27017/")
+        mongo_dbname = getattr(core_settings, "MONGODB_DATABASE", "pixel_pirates")
+        _mongo_client = pymongo.MongoClient(mongo_url, serverSelectionTimeoutMS=3000)
+        # Ping to verify connection/authentication
         _mongo_client.admin.command("ping")
-        _db = _mongo_client["pixel_pirates"]
+        _db = _mongo_client[mongo_dbname]
         return _db
     except Exception as e:
         logger.warning(f"pymongo connection failed: {e}")
@@ -50,40 +55,69 @@ def _clean_doc(doc: dict) -> dict:
 
 # ── Startup loader ─────────────────────────────────────────────
 def load_from_mongodb():
-    """Load all collections into in-memory dicts. Called once at startup."""
-    db = _get_db()
-    if db is None:
-        logger.warning("MongoDB not available — caches stay empty")
-        return
-
-    # Clear caches first so reseeds are reflected exactly.
-    MOCK_USERS.clear()
-    MOCK_TOPICS.clear()
-    MOCK_SEARCH_HISTORY.clear()
-
-    # Users
-    for doc in db.users.find():
-        user = _clean_doc(doc)
-        MOCK_USERS[user["id"]] = user
-    logger.info(f"Loaded {len(MOCK_USERS)} users from MongoDB")
-
-    # Topics
-    for doc in db.topics.find():
-        topic = _clean_doc(doc)
-        MOCK_TOPICS[topic["id"]] = topic
-    logger.info(f"Loaded {len(MOCK_TOPICS)} topics from MongoDB")
-
-    # Search history  (stored per-user)
-    for doc in db.search_history.find():
-        uid = doc.get("userId")
-        entry = {"query": doc["query"], "time": doc.get("time", "Unknown")}
-        MOCK_SEARCH_HISTORY.setdefault(uid, []).append(entry)
-    logger.info(f"Loaded search history for {len(MOCK_SEARCH_HISTORY)} users from MongoDB")
+    """Legacy sync loader; intentionally left as a no-op to avoid
+    unauthenticated pymongo access during startup. Prefer using
+    `async_initialize_data()` which uses the application's Motor client."""
+    logger.debug("load_from_mongodb() called — no-op (use async_initialize_data instead)")
+    return
 
 
 def initialize_data():
     """Load data from MongoDB into in-memory caches."""
-    load_from_mongodb()
+    # Legacy sync initializer kept for compatibility with scripts.
+    # Prefer using `async_initialize_data()` from the application startup.
+    try:
+        load_from_mongodb()
+    except Exception:
+        # If sync load fails (common if Mongo requires auth), do nothing.
+        logger.warning("Sync initialize_data() failed — use async_initialize_data() on server startup")
+
+
+async def async_initialize_data():
+    """Async initializer to populate in-memory caches from the async Motor DB client.
+
+    This should be awaited from the FastAPI startup event after `connect_to_mongo()`.
+    """
+    try:
+        from app.core.database import db as database_core
+        if database_core.database is None:
+            logger.warning("async_initialize_data: Motor database not available")
+            return
+
+        # Load topics
+        topics_col = database_core.database["topics"]
+        topics = await topics_col.find({}).to_list(length=None)
+        MOCK_TOPICS.clear()
+        for t in topics:
+            tid = str(t.get("_id"))
+            t_copy = dict(t)
+            t_copy["id"] = tid
+            t_copy.pop("_id", None)
+            MOCK_TOPICS[tid] = t_copy
+
+        # Load users
+        users_col = database_core.database["users"]
+        users = await users_col.find({}).to_list(length=None)
+        MOCK_USERS.clear()
+        for u in users:
+            uid = str(u.get("_id"))
+            u_copy = dict(u)
+            u_copy["id"] = uid
+            u_copy.pop("_id", None)
+            MOCK_USERS[uid] = u_copy
+
+        # Load search history
+        search_col = database_core.database["search_history"]
+        searches = await search_col.find({}).to_list(length=None)
+        MOCK_SEARCH_HISTORY.clear()
+        for s in searches:
+            uid = s.get("userId")
+            entry = {"query": s.get("query"), "time": s.get("time", "Unknown")}
+            MOCK_SEARCH_HISTORY.setdefault(uid, []).append(entry)
+
+        logger.info(f"Async loaded {len(MOCK_TOPICS)} topics and {len(MOCK_USERS)} users from MongoDB")
+    except Exception as e:
+        logger.warning(f"async_initialize_data failed: {e}")
 
 
 def _ensure_cache_loaded(require_users: bool = False, require_topics: bool = False):

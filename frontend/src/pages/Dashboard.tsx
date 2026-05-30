@@ -83,11 +83,26 @@ export const Dashboard = () => {
     const { user, refreshUser } = useAuth();
     const { preferences } = useUserPreferences();
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [autoScroll, setAutoScroll] = useState(false);
 
     // Refresh user data when dashboard mounts to show updated profile changes
     useEffect(() => {
         refreshUser().catch(() => {});
     }, [refreshUser]);
+
+    // Auto-scroll effect: when enabled, scrolls the page down smoothly until stopped
+    useEffect(() => {
+        if (!autoScroll) return;
+        let timer: number | null = null;
+        const step = () => {
+            window.scrollBy({ top: 6, left: 0, behavior: 'smooth' });
+            timer = window.setTimeout(step, 60) as unknown as number;
+        };
+        step();
+        return () => {
+            if (timer) window.clearTimeout(timer as unknown as number);
+        };
+    }, [autoScroll]);
 
     return (
         <>
@@ -96,7 +111,7 @@ export const Dashboard = () => {
             <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <PageWrapper className="lg:pl-64" withPadding={false}>
-                <div className="h-screen pt-20 pb-4 px-3 sm:px-6 lg:px-8 w-full overflow-hidden flex flex-col" style={{ background: preferences.wallpaper.gradient }}>
+                <div className="min-h-screen pt-20 pb-4 px-3 sm:px-6 lg:px-8 w-full overflow-auto flex flex-col" style={{ background: preferences.wallpaper.gradient }}>
                     {/* Decorative Background Elements */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                         <DecorativeElement symbol="⭐" x={8} y={15} delay={0} scale={1.2} />
@@ -191,6 +206,21 @@ export const Dashboard = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Floating Keep Scrolling Toggle */}
+                <div className="fixed right-6 bottom-6 z-50">
+                    <button
+                        onClick={() => setAutoScroll(s => !s)}
+                        className={`px-4 py-2 rounded-full shadow-lg text-sm font-semibold flex items-center gap-2 ${autoScroll ? 'bg-red-500 text-white' : 'bg-white text-gray-800'}`}
+                        title={autoScroll ? 'Stop auto-scrolling' : 'Keep scrolling'}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={autoScroll ? 'M6 18L18 6M6 6l12 12' : 'M5 10l7-7 7 7M5 14l7 7 7-7'} />
+                        </svg>
+                        <span>{autoScroll ? 'Stop' : 'Keep Scrolling'}</span>
+                    </button>
+                </div>
+
             </PageWrapper>
         </>
     );

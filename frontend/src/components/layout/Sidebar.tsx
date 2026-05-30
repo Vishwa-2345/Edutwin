@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { BookOpen, User, ClipboardList, Bot, LogOut, StickyNote, TrendingUp, Clock, Search, Trash2, LayoutDashboard, BarChart3 } from 'lucide-react';
+import { BookOpen, User, ClipboardList, Bot, LogOut, StickyNote, TrendingUp, Clock, Search, Trash2, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { topicsAPI, searchAPI, usersAPI } from '../../services/api';
 
@@ -70,7 +70,6 @@ export const Sidebar = () => {
     const isChat = location.pathname === '/chat';
     const isNotes = location.pathname === '/notes';
     const isProgress = location.pathname === '/progress';
-    const isMockResults = location.pathname === '/mock-test-results';
 
     return (
         <aside className="hidden lg:flex flex-col w-64 fixed left-0 top-16 bottom-0 bg-white/90 backdrop-blur-md border-r border-pink-100 pt-4 pb-4 z-30 overflow-y-auto">
@@ -134,20 +133,7 @@ export const Sidebar = () => {
                 </Link>
             </div>
 
-            {/* Mock Test Results */}
-            <div className="px-4 mb-2">
-                <Link
-                    to="/mock-test-results"
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
-                        isMockResults
-                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                    }`}
-                >
-                    <BarChart3 className="w-5 h-5" />
-                    Test Results
-                </Link>
-            </div>
+            {/* Test Results link removed */}
 
             {/* AI Chat */}
             <div className="px-4 mb-2">

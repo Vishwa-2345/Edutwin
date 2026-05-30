@@ -4,7 +4,6 @@ import { Clock, AlertTriangle, Send, ChevronLeft, ChevronRight, BookOpen, Flag }
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { MockTestResults } from './MockTestResults';
 
 interface Question {
   id: string;
@@ -278,7 +277,42 @@ export const MockTest = ({
   }
 
   if (submitted && testResults) {
-    return <MockTestResults testResults={testResults} />;
+    // Inline simple results view to replace the removed MockTestResults component
+    const tr: any = testResults as any;
+    const score = tr.score ?? tr.correctAnswers ?? 0;
+    const total = tr.totalQuestions ?? tr.maxScore ?? 0;
+    const percentage = tr.percentage ?? (total > 0 ? Math.round((score / total) * 100) : 0);
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-2">Test Results</h2>
+          <p className="text-sm text-gray-500 mb-6">Summary of your recent submission</p>
+
+          <div className="mb-6">
+            <div className="text-4xl font-bold">{score}/{total}</div>
+            <div className="text-xl text-gray-700">{percentage}%</div>
+          </div>
+
+          {Array.isArray(tr.questionReview) && (
+            <div className="text-left max-h-64 overflow-y-auto mb-6">
+              {tr.questionReview.map((q: any, idx: number) => (
+                <div key={q.id || idx} className="p-3 border-b border-gray-100">
+                  <div className="font-semibold">Q{idx + 1}: {q.question}</div>
+                  <div className="text-sm text-gray-600">Your answer: {typeof q.userAnswer === 'number' ? String.fromCharCode(65 + q.userAnswer) : '(not answered)'}</div>
+                  <div className="text-sm text-green-700">Correct: {String.fromCharCode(65 + (q.correctAnswer ?? 0))}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => navigate('/dashboard')} className="flex-1 px-4 py-2 bg-gray-200 rounded-lg">Back to Dashboard</button>
+            <button onClick={() => navigate('/mock-test')} className="flex-1 px-4 py-2 bg-pink-500 text-white rounded-lg">Retake</button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const currentQuestion = questions[currentIndex];

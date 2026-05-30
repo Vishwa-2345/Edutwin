@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query
 from typing import List, Dict, Any, Optional
 from app.models import Topic, TopicProgress, TopicStatus, SuccessResponse
 from app.data import get_all_topics, get_topic_by_id, get_user_by_id, update_user_topic_progress
+from app.core.database import db as database_core
+from bson import ObjectId
 from app.core.auth import get_current_user_from_token
 from app.visual_formatter import get_visual_explanation_with_fallback
 
@@ -15,7 +17,18 @@ async def get_topics(
     current_user: dict = Depends(get_current_user_from_token)
 ):
     """Get all topics with user's progress status"""
-    topics = get_all_topics()
+    # Prefer live DB-backed topics when available to return full dataset (up to 200)
+    topics = []
+    try:
+        if database_core.database is not None:
+            topics_col = database_core.database["topics"]
+            cursor = topics_col.find({})
+            topics = await cursor.to_list(length=200)
+        else:
+            topics = get_all_topics()
+    except Exception:
+        # Fallback to in-memory cache
+        topics = get_all_topics()
     user = current_user
     
     # Add user progress to each topic
@@ -23,8 +36,10 @@ async def get_topics(
     completion_dates = user.get("completionDates", {})
     topics_with_progress = []
     for topic in topics:
-        topic_id = topic.get("id") or str(topic.get("_id", ""))
-        topic_name = topic.get("name", "")
+        # Normalize topic id and name from DB documents or in-memory objects
+        raw_id = topic.get("id") if isinstance(topic, dict) and topic.get("id") else topic.get("_id")
+        topic_id = str(raw_id) if raw_id is not None else ""
+        topic_name = topic.get("name") or topic.get("topicName") or ""
         
         topic_data = {
             "id": topic_id,
@@ -53,7 +68,7 @@ async def get_topics(
             topic_data["completedAt"] = ""
         
         # Apply filters
-        if language and topic["language"].lower() != language.lower():
+        if language and (topic.get("language", "") or "").lower() != language.lower():
             continue
         if status and topic_data["status"] != status:
             continue

@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date  # viewable article URLs
 import uvicorn
 from app.models import *
-from app.data import get_mock_data, initialize_data
+from app.data import get_mock_data, initialize_data, async_initialize_data
 from app.routes import auth, users, topics, quiz, videos, search, chat, ai_quiz, ai_content, questions
 from app.routes import database as db_routes
 from app.routes import notes, feedback, progress
@@ -17,8 +17,7 @@ from app.core.database import connect_to_mongo, close_mongo_connection
 settings = Settings()
 
 
-# Initialize data with proper password hashing
-initialize_data()
+# Initialize data with proper password hashing (moved to startup event)
 
 app = FastAPI(
     title="Pixel Pirates API",
@@ -42,17 +41,19 @@ async def startup_event():
     """Initialize database connection on startup"""
     print("🚀 Starting Pixel Pirates API...")
     
-    # Initialize mock data (temporary until full migration)
-    initialize_data()
-    
     # Connect to MongoDB
     print("📦 Connecting to MongoDB...")
     connection_success = await connect_to_mongo(settings)
-    
+
     if connection_success:
         print("✅ MongoDB connected successfully!")
+        # Initialize mock data from MongoDB after connection (async)
+        try:
+            await async_initialize_data()
+        except Exception as e:
+            print(f"⚠️ Failed to async-initialize data: {e}")
     else:
-        print("⚠️  MongoDB connection failed - continuing with mock data")
+        print("⚠️  MongoDB connection failed - continuing with mock data (in-memory only)")
 
 @app.on_event("shutdown")
 async def shutdown_event():
