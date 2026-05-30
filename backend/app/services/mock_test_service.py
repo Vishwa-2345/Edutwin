@@ -28,10 +28,11 @@ class MockTestSecurityService:
     """Handles all mock test security and generation"""
     
     def __init__(self):
-        self.genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        # genai SDK needs the model name without "models/" prefix
-        raw_model = settings.GEMINI_MODEL
-        self.gemini_model = raw_model if not raw_model.startswith("models/") else raw_model.split("/", 1)[1]
+                """Synchronous wrapper for Gemini API call"""
+        if not self.genai_client:
+            raise Exception("Gemini API key not configured")
+
+        from google.genai import types
         self.openrouter_api_key = settings.OPENROUTER_API_KEY
         self.openrouter_model = settings.OPENROUTER_MODEL
         self.max_violations = 10
@@ -209,8 +210,10 @@ Return ONLY a valid JSON array. No markdown, no code blocks, no extra text:
             return None
     
     def _call_gemini(self, prompt: str) -> str:
-        """Synchronous wrapper for Gemini API call using google-genai SDK"""
-        from google.genai import types
+        """Synchronous wrapper for Gemini API call"""
+        if not self.genai_client:
+            raise Exception("Gemini API key not configured")
+
         response = self.genai_client.models.generate_content(
             model=self.gemini_model,
             contents=prompt,

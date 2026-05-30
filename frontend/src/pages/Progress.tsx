@@ -399,7 +399,7 @@ export const Progress = () => {
                         className="space-y-4"
                     >
                         <h2 className="text-xl font-bold text-gray-800">Completed Topics & Scores</h2>
-                        <div className="space-y-3">
+                        <div className="max-h-[420px] overflow-y-auto space-y-3 pr-2">
                             {completedTopics.map((topic, i) => {
                                 const scorePercent = Math.round((topic.score / topic.total) * 100);
                                 return (
@@ -497,7 +497,7 @@ export const Progress = () => {
                                 </GlassCard>
 
                                 {/* Per-topic breakdown */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="max-h-[280px] overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {entries.map((entry, i) => {
                                         const info = getLevelInfo(entry.value);
                                         const Icon = info.icon;

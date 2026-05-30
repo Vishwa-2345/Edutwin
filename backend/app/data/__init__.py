@@ -755,12 +755,21 @@ def calculate_progress_metrics(user_id: str) -> dict:
     total_time_spent = 0  # in seconds
     
     for record in progress_records:
-        score = record.get("quiz_score", 0)
-        total = record.get("quiz_total", 100)
-        # Handle None values for total
+        # Normalize score and total to avoid None values from DB
+        score = record.get("quiz_score")
+        if score is None:
+            score = 0
+
+        total = record.get("quiz_total")
         if total is None:
             total = 100
-        percentage = (score / total * 100) if total > 0 else 0
+
+        # Ensure numeric types
+        try:
+            percentage = (float(score) / float(total) * 100) if float(total) > 0 else 0
+        except Exception:
+            percentage = 0
+
         status = record.get("status", "in-progress")
         
         if status == "completed" or percentage >= 70:
@@ -769,9 +778,15 @@ def calculate_progress_metrics(user_id: str) -> dict:
         if score > 0 and total > 0:
             all_scores.append(percentage)
         
-        time_spent = record.get("time_spent", 0)
-        if time_spent > 0:
-            total_time_spent += time_spent
+        time_spent = record.get("time_spent")
+        if time_spent is None:
+            time_spent = 0
+        try:
+            if time_spent > 0:
+                total_time_spent += int(time_spent)
+        except Exception:
+            # ignore malformed time_spent values
+            pass
     
     # Calculate metrics
     topics_done = len(completed_topics)
