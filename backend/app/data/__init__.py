@@ -544,8 +544,12 @@ def save_topic_progress(user_id: str, topic_id: str, data: dict) -> dict:
             user["totalHours"] = user.get("totalHours", 0) + time_hours
         
         # Update topic status based on quiz score
-        quiz_score = data.get("quiz_score", 0)
-        quiz_total = data.get("quiz_total", 100)
+        quiz_score = data.get("quiz_score")
+        if quiz_score is None:
+            quiz_score = 0
+        quiz_total = data.get("quiz_total")
+        if quiz_total is None:
+            quiz_total = 100
         status = data.get("status", "in-progress")
         percentage = (quiz_score / quiz_total * 100) if quiz_total > 0 else 0
         

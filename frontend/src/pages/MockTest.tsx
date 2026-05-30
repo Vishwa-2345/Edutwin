@@ -17,6 +17,7 @@ import {
     ArrowRight, ArrowLeft, Trophy, Shield, Loader2,
     PenLine, List, MessageSquare, BarChart3
 } from 'lucide-react';
+import { TestResultModal } from '../components/TestResultModal';
 
 type QuestionType = 'mcq' | 'fillup' | 'written';
 
@@ -247,6 +248,12 @@ export const MockTest = () => {
     const [totalTime, setTotalTime] = useState(0);
     const [score, setScore] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [savingResult, setSavingResult] = useState(false);
+    const [topicError, setTopicError] = useState(false);
+    
+    // Modal states
+    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+    const [modalResultData, setModalResultData] = useState<any>(null);
     const [error, setError] = useState<string>('');
     const [testAlreadyCompleted, setTestAlreadyCompleted] = useState(false);
 
@@ -584,7 +591,17 @@ export const MockTest = () => {
                                         Back to Topic
                                     </button>
                                     <button
-                                        onClick={() => navigate('/mock-test-results')}
+                                        onClick={() => {
+                                            // Find the previous result for this topic
+                                            const userKey = `edutwin-mock-results_${user?.id || 'guest'}`;
+                                            const stored = localStorage.getItem(userKey);
+                                            const results = stored ? JSON.parse(stored) : [];
+                                            const prevResult = results.find((r: any) => r.topicId === topicId);
+                                            if (prevResult) {
+                                                setModalResultData(prevResult);
+                                                setIsResultModalOpen(true);
+                                            }
+                                        }}
                                         className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
                                     >
                                         View Results
@@ -988,7 +1005,35 @@ export const MockTest = () => {
 
                                 <div className="flex gap-3 justify-center mt-6 flex-wrap">
                                     <button
-                                        onClick={() => navigate('/mock-test-results')}
+                                        onClick={() => {
+                                            // Construct result object for modal
+                                            const evaluations = questions.map(q => evaluateQuestion(q, answers[q.id]));
+                                            const max = questions.reduce((sum, q) => sum + q.points, 0);
+                                            const percentage = max > 0 ? Math.round((score / max) * 100) : 0;
+                                            const resultData = {
+                                                score,
+                                                maxScore: max,
+                                                percentage,
+                                                totalQuestions: questions.length,
+                                                questionReview: questions.map((q, idx) => {
+                                                    const evalRes = evaluations[idx];
+                                                    let userAnswer: any = answers[q.id];
+                                                    if (q.type === 'mcq' && typeof userAnswer === 'string') {
+                                                        userAnswer = q.options?.indexOf(userAnswer);
+                                                    }
+                                                    return {
+                                                        id: q.id,
+                                                        question: q.question,
+                                                        isCorrect: evalRes.isCorrect,
+                                                        userAnswer: userAnswer,
+                                                        correctAnswer: q.correctIdx ?? 0,
+                                                        explanation: q.explanation
+                                                    };
+                                                })
+                                            };
+                                            setModalResultData(resultData);
+                                            setIsResultModalOpen(true);
+                                        }}
                                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand text-white hover:bg-brand/90 font-medium text-sm transition-colors"
                                     >
                                         <BarChart3 className="w-4 h-4" /> View Results
@@ -1056,6 +1101,12 @@ export const MockTest = () => {
                     )}
                 </div>
             </PageWrapper>
+            
+            <TestResultModal 
+                isOpen={isResultModalOpen} 
+                onClose={() => setIsResultModalOpen(false)} 
+                result={modalResultData} 
+            />
         </>
     );
 };
