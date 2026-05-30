@@ -99,8 +99,8 @@ export const SignIn = () => {
                 </motion.div>
             </div>
 
-            {/* Left panel — branding + features */}
-            <div className="lg:w-1/2 w-full relative flex flex-col justify-center px-8 sm:px-14 lg:px-16 py-12 lg:py-0 z-10 lg:min-h-[100dvh]" style={{ background: 'linear-gradient(135deg, #fce4ec 0%, #fdf2f8 50%, #fce7f3 100%)' }}>
+            {/* Left panel — branding + features (Hidden on mobile) */}
+            <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center px-8 sm:px-14 lg:px-16 py-0 z-10 lg:min-h-[100dvh]" style={{ background: 'linear-gradient(135deg, #fce4ec 0%, #fdf2f8 50%, #fce7f3 100%)' }}>
                 {/* Decorative circles */}
                 <div className="absolute top-10 left-10 w-48 h-48 bg-pink-200/30 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute bottom-16 right-10 w-64 h-64 bg-rose-200/20 rounded-full blur-3xl pointer-events-none" />
